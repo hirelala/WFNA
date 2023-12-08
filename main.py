@@ -4,19 +4,6 @@ import spacy
 from pathlib import Path
 import sys
 from collections import Counter
-from nltk import word_tokenize
-import nltk
-import ssl
-
-# https://stackoverflow.com/a/50406704/5782985
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-else:
-    ssl._create_default_https_context = _create_unverified_https_context
-
-nltk.download('words', raise_on_error=True)
 
 spacy.cli.download('en_core_web_sm')
 nlp = spacy.load('en_core_web_sm')
@@ -98,46 +85,52 @@ def analysis(content: str):
     word_count = 0
     token_count = len(doc)
     punctuation_count = 0
-    tokens = set()
-    lemmas = set()
+    tokens = list()
+    lemmas = list()
     for token in doc:
-        tokens.add(token.text)
+        tokens.append(token.text)
         if token.is_alpha:
             word_count += 1
 
         if token.is_punct:
             punctuation_count += 1
         else:
-            lemmas.add(token.lemma_)
+            lemmas.append(token.lemma_)
 
-    tokens = list(tokens)
+    token_freq = Counter(tokens)
+    tokens = list(set(tokens))
     tokens.sort()
-    lemmas = list(lemmas)
+
+    lemma_freq = Counter(lemmas)
+    lemmas = list(set(lemmas))
     lemmas.sort()
 
     ner_count = len(doc.ents)
     ner = dict()
     for ent in doc.ents:
         if ent.label_ not in ner:
-            ner[ent.label_] = set()
-        ner[ent.label_].add(ent.text)
+            ner[ent.label_] = list()
+        ner[ent.label_].append(ent.text)
 
     for key, value in ner.items():
-        ner[key] = list(value)
-        ner[key].sort()
+        ner[key] = Counter(value)
+        # ner[key].sort(key=lambda x: x[1], reverse=True)
 
     return {
         'sentence_count': sentence_count,
         'word_count': word_count,
         'punctuation_count': punctuation_count,
+
         'token_count': token_count,
         'tokens': tokens,
+        'token_freq': token_freq,
 
         'ner_count': ner_count,
         'ner': ner,
 
         'lemmas': lemmas,
-        'lemma_count': len(lemmas)
+        'lemma_count': len(lemmas),
+        'lemma_freq': lemma_freq
     }
 
 
